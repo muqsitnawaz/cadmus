@@ -1,7 +1,10 @@
-from cadmus.loader import load_gmail, load_chrome
-from requests import post as http_post
 from json import loads as json_loads
 from typing import List
+
+from requests import post as http_post
+
+from cadmus.loader import load_chrome
+from cadmus.loader import load_gmail
 
 
 def clean_ollama_response(text: str):
@@ -15,6 +18,7 @@ def clean_ollama_response(text: str):
             result.append(json_line["response"])
 
     return "".join(result)
+
 
 def chunk_links(links, chunk_size=100):
     return [links[i:i + chunk_size] for i in range(0, len(links), chunk_size)]
@@ -50,6 +54,7 @@ def analyze_gmail():
             f.write("\n\n")
             f.close()
 
+
 def analyze_chrome():
     links = load_chrome("../data/chrome.json")
     print(f"Loaded {len(links)} links")
@@ -57,11 +62,10 @@ def analyze_chrome():
     chunked_links = chunk_links(links)
     print(f"Chunked into {len(chunked_links)} chunks")
 
-    lo, hi = 50, min(100, len(links))
+    lo, hi = 55, min(100, len(links))
     print(f"Processing {hi - lo} links from {lo} to {hi}")
 
     for chunked_link in chunked_links[lo:hi]:
-
         chunked_link_json = " ".join([str(link.model_dump()) for link in chunked_link])
 
         prompt = (f'Create my profile, interests etc based on the content of my web history: {chunked_link_json}'
@@ -83,6 +87,7 @@ def analyze_chrome():
             f.write(clean_ollama_response(response.text))
             f.write("\n\n")
             f.close()
+
 
 if __name__ == "__main__":
     # analyze_gmail()
