@@ -1,0 +1,23 @@
+version: '3.4'
+services:
+  weaviate:
+    image: semitechnologies/weaviate:1.20.2
+    restart: always
+    command:
+      - --host
+      - 0.0.0.0
+      - --port
+      - '8080'
+      - --scheme
+      - http
+    ports:
+      - 8080:8080
+    volumes:
+      - /Users/muqsit/databases/weaviate:/Users/muqsit/databases/weaviate
+    environment:
+      CLUSTER_HOSTNAME: 'cadmus'
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+      PERSISTENCE_DATA_PATH: '/Users/muqsit/databases/weaviate'
+      DISK_USE_READONLY_PERCENTAGE: 95
+      DEFAULT_VECTORIZER_MODULE: 'none'
