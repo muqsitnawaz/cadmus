@@ -35,7 +35,8 @@ class Cache:
         for item in latest:
             logger.info(item)
 
-        similar = self.database.get_similar_messages(latest[0], limit=similar)
+        latest_message = latest[0]  # Most recent message
+        similar = self.database.get_similar_messages(latest_message, limit=similar)
 
         for item in similar:
             logger.info(item)
@@ -52,20 +53,37 @@ class Cache:
 
         return result
 
-    def get_all(self):
-        return {
-            'Messages': self.messages,
-            'Notes': self.notes,
-            'Functions': self.functions,
-        }
+    def get_notes(self, latest=3, similar=3):
+        latest = self.database.get_latest_notes(limit=latest)
 
-    def get_relevant(self, message):
-        # TODO: Implement logic to get relevant messages, notes, and functions
-        return {
-            'Messages': self.messages,
-            'Notes': self.notes,
-            'Functions': self.functions,
-        }
+        for item in latest:
+            logger.info(item)
+
+        latest_note = latest[0]
+        similar = self.database.get_similar_notes(latest_note, limit=similar)
+
+        for item in similar:
+            logger.info(item)
+
+        notes: Dict[str, Note] = {}
+        for item in latest + similar:
+            notes[item.uuid] = item
+
+        result = list(notes.values())
+        result.sort(key=lambda x: x.timestamp, reverse=True)
+
+        for item in result:
+            logger.warning(item)
+
+        return result
+
+    def get_functions(self, description: str, limit=3):
+        similar = self.database.get_similar_functions(description, limit=limit)
+
+        for item in similar:
+            logger.info(item)
+
+        return similar
 
 
 if __name__ == "__main__":
@@ -76,8 +94,13 @@ if __name__ == "__main__":
     cache.add_message(Message(uuid=str(uuid4()), role="User3", content="Hello, World!", timestamp=datetime.now()))
     cache.add_message(Message(uuid=str(uuid4()), role="User4", content="Hello, World!", timestamp=datetime.now()))
     cache.add_message(Message(uuid=str(uuid4()), role="User5", content="Hello, World!", timestamp=datetime.now()))
-    cache.add_note(Note(uuid=str(uuid4()), content="This is a note.", timestamp=datetime.now()))
-    cache.add_function(Function(uuid=str(uuid4()), name="print", description="print()"))
-    # print(cache.get_all())
 
-    cache.get_messages()
+    cache.add_note(Note(uuid=str(uuid4()), content="This is a note.", timestamp=datetime.now()))
+    cache.add_note(Note(uuid=str(uuid4()), content="This is a note1.", timestamp=datetime.now()))
+    cache.add_note(Note(uuid=str(uuid4()), content="This is a note2.", timestamp=datetime.now()))
+
+    cache.add_function(Function(uuid=str(uuid4()), name="send_email", description="to send an email"))
+
+    messages = cache.get_messages()
+    notes = cache.get_notes()
+    functions = cache.get_functions(description="to send an email")

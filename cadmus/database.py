@@ -102,7 +102,7 @@ class Database:
         embedding = self.__embed__(function.name)
         return self.__create_object__("Function", function, embedding)
 
-    def get_latest_messages(self, limit=3) -> List[Message]:
+    def get_latest_messages(self, limit: int) -> List[Message]:
         response = (
             self.client.query
             .get(
@@ -129,7 +129,7 @@ class Database:
             ))
         return result
 
-    def get_similar_messages(self, message: Message, limit=3) -> List[Message]:
+    def get_similar_messages(self, message: Message, limit: int) -> List[Message]:
         response = (
             self.client.query
             .get(
@@ -158,6 +158,88 @@ class Database:
             ))
         return result
 
+    def get_latest_notes(self, limit: int):
+        response = (
+            self.client.query
+            .get(
+                class_name="Note",
+                properties=["uuid", "content", "timestamp"],
+            )
+            .with_sort({
+                'path': ['timestamp'],
+                'order': 'desc',
+            })
+            .with_limit(limit)
+            .do()
+        )
+
+        logger.debug(response)
+
+        result: List[Note] = []
+        for item in response['data']['Get']['Note']:
+            result.append(Note(
+                uuid=item['uuid'],
+                content=item['content'],
+                timestamp=item['timestamp'],
+            ))
+        return result
+
+    def get_similar_notes(self, note: Note, limit: int):
+        response = (
+            self.client.query
+            .get(
+                class_name="Note",
+                properties=["uuid", "content", "timestamp"],
+            )
+            .with_near_vector(
+                {
+                    'vector': self.__embed__(note.content),
+                    'certainty': 0.8,
+                }
+            )
+            .with_limit(limit)
+            .do()
+        )
+
+        logger.debug(response)
+
+        result: List[Note] = []
+        for item in response['data']['Get']['Note']:
+            result.append(Note(
+                uuid=item['uuid'],
+                content=item['content'],
+                timestamp=item['timestamp'],
+            ))
+        return result
+
+    def get_similar_functions(self, description: str, limit: int):
+        response = (
+            self.client.query
+            .get(
+                class_name="Function",
+                properties=["uuid", "name", "description"],
+            )
+            .with_near_vector(
+                {
+                    'vector': self.__embed__(description),
+                    'certainty': 0.8,
+                }
+            )
+            .with_limit(limit)
+            .do()
+        )
+
+        logger.debug(response)
+
+        result: List[Function] = []
+        for item in response['data']['Get']['Function']:
+            result.append(Function(
+                uuid=item['uuid'],
+                name=item['name'],
+                description=item['description'],
+            ))
+        return result
+
     def __create_object__(self, class_name: str, data_object, embedding) -> str:
         uuid = data_object.uuid
         self.client.data_object.create(
@@ -167,6 +249,15 @@ class Database:
             vector=embedding
         )
         return uuid
+
+    def __count_objects__(self, class_name: str):
+        response = (
+            self.client.query
+            .aggregate(class_name)
+            .with_meta_count()
+            .do()
+        )
+        return response['data']['Aggregate'][class_name][0]['meta']['count']
 
     def __embed__(self, text: str):
         _ = text
