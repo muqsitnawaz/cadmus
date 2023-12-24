@@ -7,7 +7,7 @@ module which makes retrieving the latest and most similar information super easy
 
 Current AI agents and their memory mechanism do not provide a unified way to store and
 retrieve the latest and most similar messages which is often time needed when using the
-APIs of LLMS providers e.g. OpenAI.
+APIs of LLMs providers e.g. OpenAI.
 
 In a real-world AI product, it is generally not feasible to store all this information in
 the LLM context. For example, in a chatbot, the conversation history can be range from months to years. Similarly,
@@ -36,7 +36,7 @@ passed to the LLM APIs.
 ```python
 from cadmus import Cache
 
-cache = Cache()
+cache = Cache()  # or Cache(backend='https://weaviate-instance.com')
 
 cache.add_message(...)
 
@@ -47,7 +47,7 @@ messages = cache.get_messages()
 messages1 = cache.get_messages(latest=10, similar=0)
 
 # Get top 10 messages similar to the latest message
-messages2 = cache.get_messages(latest=1, similar=10) 
+messages2 = cache.get_messages(latest=1, similar=10)
 ```
 
 In the above example, calling the .get_messages() method will return the top and similar messages
@@ -58,6 +58,45 @@ messages are the ones that are similar to the top messages.
 
 ```bash
 pip install zf-cadmus
+```
+
+```bash
+# ~/.zshrc
+export OPENAI_API_KEY=<your-openai-api-key>
+```
+
+You will need to spin up a Weaviate instance in order to use Cadmus. You can do so using
+Docker in the following:
+
+```yaml
+# db.yml
+version: '3.4'
+services:
+  weaviate:
+    image: semitechnologies/weaviate:1.20.2
+    restart: always
+    command:
+      - --host
+      - 0.0.0.0
+      - --port
+      - '8080'
+      - --scheme
+      - http
+    ports:
+      - 8080:8080
+    volumes:
+      - /Users/<USER>/databases/weaviate:/Users/<USER>/databases/weaviate
+    environment:
+      CLUSTER_HOSTNAME: 'cadmus'
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+      PERSISTENCE_DATA_PATH: '/Users/<USER>/databases/weaviate'
+      DISK_USE_READONLY_PERCENTAGE: 95
+      DEFAULT_VECTORIZER_MODULE: 'none'
+```
+
+```bash
+docker compose -f db.yml up -d
 ```
 
 # Appendix

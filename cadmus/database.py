@@ -10,84 +10,26 @@ from model import Function
 from model import Message
 from model import Note
 
-openai = OpenAI()
-
-schemas: Dict[str, Dict] = {
-    "Message": {
-        "class": "Message",
-        "properties": [
-            {
-                "name": "uuid",
-                "dataType": ["uuid"],
-            },
-            {
-                "name": "role",
-                "dataType": ["text"]
-            },
-            {
-                "name": "content",
-                "dataType": ["text"],
-            },
-            {
-                "name": "timestamp",
-                "dataType": ["date"],
-            },
-        ]
-    },
-    "Note": {
-        "class": "Note",
-        "properties": [
-            {
-                "name": "uuid",
-                "dataType": ["uuid"],
-            },
-            {
-                "name": "content",
-                "dataType": ["text"],
-            },
-            {
-                "name": "timestamp",
-                "dataType": ["date"],
-            },
-        ]
-    },
-    "Function": {
-        "class": "Function",
-        "properties": [
-            {
-                "name": "uuid",
-                "dataType": ["uuid"],
-            },
-            {
-                "name": "name",
-                "dataType": ["text"],
-            },
-            {
-                "name": "schema",
-                "dataType": ["text"],
-            },
-        ]
-    },
-}
-
 
 class Database:
-    def __init__(self, refresh=False):
-        self.client = WeaviateClient("http://localhost:8080")  # Replace with your endpoint
+    def __init__(self, backend="http://localhost:8080", refresh=False):
+        self.database = WeaviateClient(backend)
+        self.client = OpenAI()
+        self.schemas = self.__schemas__()
 
         if refresh:
-            self.client.schema.delete_class("Message")
-            self.client.schema.delete_class("Note")
-            self.client.schema.delete_class("Function")
+            self.database.schema.delete_class("Message")
+            self.database.schema.delete_class("Note")
+            self.database.schema.delete_class("Function")
 
-        if not self.client.schema.exists("Message"):
-            self.client.schema.create_class(schemas["Message"])
+        if not self.database.schema.exists("Message"):
+            self.database.schema.create_class(self.schemas["Message"])
 
-        if not self.client.schema.exists("Note"):
-            self.client.schema.create_class(schemas["Note"])
+        if not self.database.schema.exists("Note"):
+            self.database.schema.create_class(self.schemas["Note"])
 
-        if not self.client.schema.exists("Function"):
-            self.client.schema.create_class(schemas["Function"])
+        if not self.database.schema.exists("Function"):
+            self.database.schema.create_class(self.schemas["Function"])
 
     def add_message(self, message: Message) -> str:
         embedding = self.__embed__(message.content)
@@ -104,7 +46,7 @@ class Database:
 
     def get_latest_messages(self, limit: int) -> List[Message]:
         response = (
-            self.client.query
+            self.database.query
             .get(
                 class_name="Message",
                 properties=["uuid", "role", "content", "timestamp"],
@@ -131,7 +73,7 @@ class Database:
 
     def get_similar_messages(self, message: Message, limit: int) -> List[Message]:
         response = (
-            self.client.query
+            self.database.query
             .get(
                 class_name="Message",
                 properties=["uuid", "role", "content", "timestamp"],
@@ -160,7 +102,7 @@ class Database:
 
     def get_latest_notes(self, limit: int):
         response = (
-            self.client.query
+            self.database.query
             .get(
                 class_name="Note",
                 properties=["uuid", "content", "timestamp"],
@@ -186,7 +128,7 @@ class Database:
 
     def get_similar_notes(self, note: Note, limit: int):
         response = (
-            self.client.query
+            self.database.query
             .get(
                 class_name="Note",
                 properties=["uuid", "content", "timestamp"],
@@ -214,7 +156,7 @@ class Database:
 
     def get_similar_functions(self, description: str, limit: int):
         response = (
-            self.client.query
+            self.database.query
             .get(
                 class_name="Function",
                 properties=["uuid", "name", "description"],
@@ -242,7 +184,7 @@ class Database:
 
     def __create_object__(self, class_name: str, data_object, embedding) -> str:
         uuid = data_object.uuid
-        self.client.data_object.create(
+        self.database.data_object.create(
             data_object=data_object.safe_dict(),
             class_name=class_name,
             uuid=uuid,
@@ -252,7 +194,7 @@ class Database:
 
     def __count_objects__(self, class_name: str):
         response = (
-            self.client.query
+            self.database.query
             .aggregate(class_name)
             .with_meta_count()
             .do()
@@ -260,14 +202,71 @@ class Database:
         return response['data']['Aggregate'][class_name][0]['meta']['count']
 
     def __embed__(self, text: str):
-        _ = text
-        return [1, 2, 3]
-        #
-        # response = openai.embeddings.create(
-        #     model="text-embedding-ada-002",
-        #     input=text
-        # )
-        # return response['data'][0]['embedding']  # Accessing the embedding
+        response = self.client.embeddings.create(
+            model="text-embedding-ada-002",
+            input=text
+        )
+        print(response)
+        return response.data[0].embedding
+
+    def __schemas__(self) -> Dict[str, Dict]:
+        return {
+            "Message": {
+                "class": "Message",
+                "properties": [
+                    {
+                        "name": "uuid",
+                        "dataType": ["uuid"],
+                    },
+                    {
+                        "name": "role",
+                        "dataType": ["text"]
+                    },
+                    {
+                        "name": "content",
+                        "dataType": ["text"],
+                    },
+                    {
+                        "name": "timestamp",
+                        "dataType": ["date"],
+                    },
+                ]
+            },
+            "Note": {
+                "class": "Note",
+                "properties": [
+                    {
+                        "name": "uuid",
+                        "dataType": ["uuid"],
+                    },
+                    {
+                        "name": "content",
+                        "dataType": ["text"],
+                    },
+                    {
+                        "name": "timestamp",
+                        "dataType": ["date"],
+                    },
+                ]
+            },
+            "Function": {
+                "class": "Function",
+                "properties": [
+                    {
+                        "name": "uuid",
+                        "dataType": ["uuid"],
+                    },
+                    {
+                        "name": "name",
+                        "dataType": ["text"],
+                    },
+                    {
+                        "name": "schema",
+                        "dataType": ["text"],
+                    },
+                ]
+            },
+        }
 
 
 if __name__ == "__main__":

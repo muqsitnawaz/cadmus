@@ -12,13 +12,13 @@ from model import Note
 
 
 class Cache:
-    def __init__(self):
+    def __init__(self, backend="http://localhost:8080"):
         print(path.dirname(path.realpath(__file__)))
         self.messages = []
         self.notes = []
         self.functions = []
 
-        self.database = Database(refresh=True)
+        self.database = Database(backend=backend)
 
     def add_message(self, message: Message):
         self.database.add_message(message)
