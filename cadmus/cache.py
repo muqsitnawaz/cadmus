@@ -30,6 +30,9 @@ class Cache:
         self.database.add_function(function)
 
     def get_messages(self, latest=3, similar=3):
+        if latest < 0:
+            latest = 1
+
         latest = self.database.get_latest_messages(limit=latest)
 
         for item in latest:

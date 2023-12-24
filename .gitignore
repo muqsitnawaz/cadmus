@@ -1,3 +1,7 @@
+**/__pycache__
 **/.DS_Store
 .idea
+build
+dist
 venv
+zf_cadmus.egg-info/
